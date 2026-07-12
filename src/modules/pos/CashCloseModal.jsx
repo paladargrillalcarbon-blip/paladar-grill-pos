@@ -268,15 +268,19 @@ export default function CashCloseModal({ onClose }) {
                 />
               </div>
 
-              <div className={`card p-3 border-light text-center font-bold ${countedCash === '' ? 'text-muted' : stats.diff === 0 ? 'text-success' : stats.diff > 0 ? 'text-warning' : 'text-danger'}`}>
-                Diferencia:{' '}
+              <div className={`card p-4 text-center border-2 ${countedCash === '' ? 'border-border' : stats.diff === 0 ? 'border-success bg-success/10 text-success' : stats.diff > 0 ? 'border-warning bg-warning/10 text-warning' : 'border-danger bg-danger/10 text-danger'}`}>
+                <div className="text-xs font-bold uppercase mb-1 opacity-70">Resultado del Cuadre</div>
                 {countedCash === '' ? (
-                  <span>Ingrese el monto contado...</span>
+                  <div className="text-muted text-lg font-bold">Esperando conteo físico...</div>
                 ) : (
                   <>
-                    {stats.diff === 0 ? '' : stats.diff > 0 ? '+ ' : '- '}
-                    {formatCOP(Math.abs(stats.diff))}{' '}
-                    {stats.diff > 0 ? '(Sobrante)' : stats.diff < 0 ? '(Faltante)' : '✔ Cuadre Perfecto'}
+                    <div className="text-3xl font-black">
+                      {stats.diff === 0 ? '' : stats.diff > 0 ? '+ ' : '- '}
+                      {formatCOP(Math.abs(stats.diff))}
+                    </div>
+                    <div className="text-sm font-bold mt-1">
+                      {stats.diff > 0 ? 'SOBRANTE EN CAJA' : stats.diff < 0 ? 'FALTANTE EN CAJA' : 'CUADRE PERFECTO ✔'}
+                    </div>
                   </>
                 )}
               </div>
