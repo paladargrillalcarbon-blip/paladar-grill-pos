@@ -266,13 +266,18 @@ export default function CashCloseModal({ onClose }) {
                   type="text"
                   inputMode="numeric"
                   className="form-input w-full text-lg font-bold"
-                  placeholder="Ej: 100.000"
-                  value={countedCash ? new Intl.NumberFormat('es-CO').format(parseInt(countedCash, 10)) : ''}
+                  placeholder="Escriba aquí los números (ej. 100000 sin puntos)"
+                  value={countedCash}
                   onChange={e => {
                     const val = e.target.value.replace(/[^0-9]/g, '');
                     setCountedCash(val);
                   }}
                 />
+                {countedCash !== '' && (
+                  <div className="text-sm font-bold text-accent mt-1 text-right">
+                    Valor interpretado: {formatCOP(parseInt(countedCash || 0, 10))}
+                  </div>
+                )}
               </div>
 
               <div className={`card p-4 text-center border-2 ${countedCash === '' ? 'border-border' : stats.diff === 0 ? 'border-success bg-success/10 text-success' : stats.diff > 0 ? 'border-warning bg-warning/10 text-warning' : 'border-danger bg-danger/10 text-danger'}`}>
