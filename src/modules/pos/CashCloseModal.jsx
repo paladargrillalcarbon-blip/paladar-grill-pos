@@ -142,10 +142,9 @@ export default function CashCloseModal({ onClose }) {
         ${closingData.cashExpenses > 0 ? `<div class="row red"><span>- Gastos efectivo:</span><span>-${formatCOP(closingData.cashExpenses)}</span></div>` : ''}
         <div class="row bold"><span>= Efectivo esperado:</span><span>${formatCOP(closingData.expectedCash)}</span></div>
         <div class="row"><span>Efectivo contado:</span><span>${formatCOP(closingData.countedCash)}</span></div>
-        <div class="divider"></div>
         <div class="row big ${closingData.difference === 0 ? 'diff-ok' : 'diff-bad'}">
           <span>DIFERENCIA:</span>
-          <span>${formatCOP(closingData.difference)} ${closingData.difference > 0 ? '(Sobrante)' : closingData.difference < 0 ? '(Faltante)' : '✔ Cuadre Perfecto'}</span>
+          <span>${closingData.difference === 0 ? '' : closingData.difference > 0 ? '+' : '-'}${formatCOP(Math.abs(closingData.difference))} ${closingData.difference > 0 ? '(Sobrante)' : closingData.difference < 0 ? '(Faltante)' : '✔ Cuadre Perfecto'}</span>
         </div>
         <div class="divider"></div>
         <p class="center" style="font-size:11px;">Generado por POS Paladar Grill</p>
@@ -269,12 +268,18 @@ export default function CashCloseModal({ onClose }) {
                 />
               </div>
 
-              {countedCash && (
-                <div className={`card p-3 border-light text-center font-bold ${stats.diff === 0 ? 'text-success' : stats.diff > 0 ? 'text-warning' : 'text-danger'}`}>
-                  Diferencia: {formatCOP(stats.diff)}{' '}
-                  {stats.diff > 0 ? '(Sobrante)' : stats.diff < 0 ? '(Faltante)' : '✔ Cuadre Perfecto'}
-                </div>
-              )}
+              <div className={`card p-3 border-light text-center font-bold ${countedCash === '' ? 'text-muted' : stats.diff === 0 ? 'text-success' : stats.diff > 0 ? 'text-warning' : 'text-danger'}`}>
+                Diferencia:{' '}
+                {countedCash === '' ? (
+                  <span>Ingrese el monto contado...</span>
+                ) : (
+                  <>
+                    {stats.diff === 0 ? '' : stats.diff > 0 ? '+ ' : '- '}
+                    {formatCOP(Math.abs(stats.diff))}{' '}
+                    {stats.diff > 0 ? '(Sobrante)' : stats.diff < 0 ? '(Faltante)' : '✔ Cuadre Perfecto'}
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
