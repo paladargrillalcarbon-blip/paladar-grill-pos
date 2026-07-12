@@ -37,24 +37,27 @@ export default function CashCloseModal({ onClose }) {
       .reduce((s, p) => s + p.amount, 0);
   }, [dailyPurchases]);
 
-  const stats = useMemo(() => {
-    let cash = 0, card = 0, nequi = 0, daviplata = 0, totalSales = 0, totalTips = 0;
-    todaysCompletedOrders.forEach(order => {
-      totalSales += order.totals?.grandTotal || 0;
-      totalTips  += order.tip || 0;
-      (order.payments || []).forEach(p => {
-        const amount = Number(p.amount) || 0;
-        if (p.method === 'cash')      cash      += amount;
-        if (p.method === 'card')      card      += amount;
-        if (p.method === 'nequi')     nequi     += amount;
-        if (p.method === 'daviplata') daviplata += amount;
-      });
+  // Calcular stats en cada render para evitar cualquier problema de stale state
+  let cash = 0, card = 0, nequi = 0, daviplata = 0, totalSales = 0, totalTips = 0;
+  todaysCompletedOrders.forEach(order => {
+    totalSales += order.totals?.grandTotal || 0;
+    totalTips  += order.tip || 0;
+    (order.payments || []).forEach(p => {
+      const amount = Number(p.amount) || 0;
+      if (p.method === 'cash')      cash      += amount;
+      if (p.method === 'card')      card      += amount;
+      if (p.method === 'nequi')     nequi     += amount;
+      if (p.method === 'daviplata') daviplata += amount;
     });
-    // Efectivo esperado = base + ventas efectivo - gastos pagados en efectivo
-    const expectedCash = (cashSession?.initialAmount || 0) + cash - todayCashExpenses;
-    const diff = (Number(countedCash) || 0) - expectedCash;
-    return { cash, card, nequi, daviplata, totalSales, totalTips, expectedCash, diff };
-  }, [todaysCompletedOrders, cashSession, countedCash, todayCashExpenses]);
+  });
+  const expectedCash = (cashSession?.initialAmount || 0) + cash - todayCashExpenses;
+  
+  // Extraer sólo números para evitar problemas con comas o puntos del teclado
+  const cleanCounted = countedCash.toString().replace(/[^0-9]/g, '');
+  const parsedCounted = cleanCounted ? parseInt(cleanCounted, 10) : 0;
+  const diff = parsedCounted - expectedCash;
+  
+  const stats = { cash, card, nequi, daviplata, totalSales, totalTips, expectedCash, diff };
 
   const handleOpen = () => {
     if (!selectedStaff || !openingBase) return;
@@ -78,7 +81,7 @@ export default function CashCloseModal({ onClose }) {
       tips:           stats.totalTips,
       cashExpenses:   todayCashExpenses,
       expectedCash:   stats.expectedCash,
-      countedCash:    Number(countedCash),
+      countedCash:    parsedCounted,
       difference:     stats.diff,
       ordersCount:    todaysCompletedOrders.length,
     };
@@ -260,11 +263,15 @@ export default function CashCloseModal({ onClose }) {
                   Efectivo Real Contado
                 </label>
                 <input
-                  type="number"
-                  className="form-input w-full"
-                  placeholder="Ingrese el dinero físico en caja..."
+                  type="text"
+                  inputMode="numeric"
+                  className="form-input w-full text-lg font-bold"
+                  placeholder="Ej: 100000"
                   value={countedCash}
-                  onChange={e => setCountedCash(e.target.value)}
+                  onChange={e => {
+                    const val = e.target.value.replace(/[^0-9]/g, '');
+                    setCountedCash(val);
+                  }}
                 />
               </div>
 
