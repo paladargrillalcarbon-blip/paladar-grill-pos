@@ -266,8 +266,8 @@ export default function CashCloseModal({ onClose }) {
                   type="text"
                   inputMode="numeric"
                   className="form-input w-full text-lg font-bold"
-                  placeholder="Ej: 100000"
-                  value={countedCash}
+                  placeholder="Ej: 100.000"
+                  value={countedCash ? new Intl.NumberFormat('es-CO').format(parseInt(countedCash, 10)) : ''}
                   onChange={e => {
                     const val = e.target.value.replace(/[^0-9]/g, '');
                     setCountedCash(val);
