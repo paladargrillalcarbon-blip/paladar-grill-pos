@@ -24,7 +24,7 @@ export default function Dashboard() {
 
   const todaysOrders = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return orders.filter(o => o.createdAt.startsWith(today));
+    return (orders || []).filter(o => o.createdAt?.startsWith(today));
   }, [orders]);
 
   const activeOrders = useMemo(() => {
