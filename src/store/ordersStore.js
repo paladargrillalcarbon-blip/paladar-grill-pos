@@ -89,6 +89,6 @@ export const useOrdersStore = create(
         });
       },
     }),
-    { name: 'paladar-orders' }
+    { name: 'paladar-orders-v2' }
   )
 );

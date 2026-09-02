@@ -166,6 +166,6 @@ export const useInventoryStore = create(
         return get().ingredients.filter((i) => i.stock <= i.minStock);
       },
     }),
-    { name: 'paladar-inventory' }
+    { name: 'paladar-inventory-v2' }
   )
 );

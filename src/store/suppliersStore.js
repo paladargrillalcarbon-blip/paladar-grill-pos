@@ -30,6 +30,6 @@ export const useSuppliersStore = create(
         ]
       }))
     }),
-    { name: 'paladar-suppliers-storage' }
+    { name: 'paladar-suppliers-storage-v2' }
   )
 );

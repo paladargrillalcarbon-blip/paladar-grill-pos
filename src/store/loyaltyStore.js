@@ -153,6 +153,6 @@ export const useLoyaltyStore = create(
         settings: { ...s.settings, ...settingsData }
       }))
     }),
-    { name: 'paladar-loyalty-storage' }
+    { name: 'paladar-loyalty-storage-v2' }
   )
 );

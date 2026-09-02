@@ -2,11 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 // Default initial users for a fresh system
-const initialUsers = [
-  { id: 'usr-1', name: 'Administrador Principal', username: 'admin', password: '123', role: 'superadmin' },
-  { id: 'usr-2', name: 'Caja Principal', username: 'caja', password: '123', role: 'cajero' },
-  { id: 'usr-3', name: 'Mesero 1', username: 'mesero1', password: '123', role: 'mesero' }
-];
+const initialUsers = [];
 
 export const useAuthStore = create(
   persist(
@@ -40,6 +36,6 @@ export const useAuthStore = create(
         users: s.users.filter(u => u.id !== id)
       })),
     }),
-    { name: 'paladar-auth-v2' }
+    { name: 'paladar-auth-v3' }
   )
 );

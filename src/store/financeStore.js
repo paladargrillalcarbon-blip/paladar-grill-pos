@@ -55,6 +55,6 @@ export const useFinanceStore = create(
         });
       },
     }),
-    { name: 'paladar-finance' }
+    { name: 'paladar-finance-v2' }
   )
 );

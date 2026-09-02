@@ -1,17 +1,45 @@
 import { useState } from 'react';
-import { Lock, LogIn } from 'lucide-react';
+import { Lock, LogIn, UserPlus } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export default function Login() {
-  const { users, login } = useAuthStore();
+  const { users, login, addUser, login: directLogin } = useAuthStore();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [error, setError] = useState('');
+
+  const isSetupMode = users.length === 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!username || !password) return;
     
+    if (isSetupMode) {
+      if (!name) {
+        setError('El nombre completo es requerido.');
+        return;
+      }
+      
+      // Register new admin
+      const newAdmin = {
+        name,
+        username,
+        password,
+        role: 'superadmin',
+        isActive: true,
+      };
+      addUser(newAdmin);
+      
+      // Attempt login immediately
+      const result = directLogin(username, password);
+      if (!result.success) {
+        setError(result.error);
+      }
+      return;
+    }
+
+    // Normal login
     const result = login(username, password);
     if (!result.success) {
       setError(result.error);
@@ -24,10 +52,16 @@ export default function Login() {
       <div className="card p-8 w-full max-w-sm shadow-xl border-accent">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-accent/20 text-accent mb-4">
-            <Lock size={32} />
+            {isSetupMode ? <UserPlus size={32} /> : <Lock size={32} />}
           </div>
-          <h1 className="text-2xl font-extrabold text-foreground">Paladar Grill POS</h1>
-          <p className="text-muted mt-1">Inicia sesión en tu cuenta</p>
+          <h1 className="text-2xl font-extrabold text-foreground">
+            {isSetupMode ? 'Bienvenido a Paladar Grill' : 'Paladar Grill POS'}
+          </h1>
+          <p className="text-muted mt-2 text-sm leading-relaxed">
+            {isSetupMode 
+              ? 'Parece que es la primera vez que usas el sistema. Crea tu cuenta de Administrador Principal para comenzar.'
+              : 'Inicia sesión en tu cuenta para continuar.'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -38,8 +72,22 @@ export default function Login() {
             </div>
           )}
 
+          {isSetupMode && (
+            <div>
+              <label className="block text-sm font-bold mb-1">Nombre Completo *</label>
+              <input
+                type="text"
+                className="form-input w-full"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ej. Rodrigo Sotelo"
+                autoFocus
+              />
+            </div>
+          )}
+
           <div>
-            <label className="block text-sm font-bold mb-1">Usuario</label>
+            <label className="block text-sm font-bold mb-1">Usuario (Login) *</label>
             <input
               type="text"
               className="form-input w-full"
@@ -47,43 +95,34 @@ export default function Login() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Ej. admin"
               autoComplete="username"
-              autoFocus
+              autoFocus={!isSetupMode}
             />
           </div>
 
           <div className="mb-2">
-            <label className="block text-sm font-bold mb-1">Contraseña</label>
+            <label className="block text-sm font-bold mb-1">Contraseña *</label>
             <input
               type="password"
               className="form-input w-full"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
-              autoComplete="current-password"
+              autoComplete={isSetupMode ? "new-password" : "current-password"}
             />
           </div>
 
           <button 
             type="submit" 
             className="btn btn-primary w-full h-12 text-lg font-bold mt-2"
-            disabled={!username || !password}
+            disabled={!username || !password || (isSetupMode && !name)}
           >
-            <LogIn size={18} className="mr-2" /> Entrar al Sistema
+            {isSetupMode ? (
+              <><UserPlus size={18} className="mr-2" /> Crear Administrador</>
+            ) : (
+              <><LogIn size={18} className="mr-2" /> Entrar al Sistema</>
+            )}
           </button>
         </form>
-
-        {/* Development hints */}
-        <div className="mt-8 pt-4 border-t border-border text-xs text-muted text-center">
-          <p className="font-bold mb-2">Cuentas de prueba (DEV):</p>
-          <div className="flex flex-col gap-2">
-            {users.map(u => (
-              <div key={u.id}>
-                User: <span className="font-bold">{u.username}</span> | Pass: <span className="font-bold">{u.password}</span> <br/>
-                <span className="opacity-70">({u.role})</span>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );

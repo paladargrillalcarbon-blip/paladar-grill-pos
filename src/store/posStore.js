@@ -239,6 +239,6 @@ export const usePosStore = create(
         set({ cashSession: null });
       },
     }),
-    { name: 'paladar-pos' }
+    { name: 'paladar-pos-v2' }
   )
 );

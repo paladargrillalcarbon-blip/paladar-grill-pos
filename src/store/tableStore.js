@@ -56,8 +56,6 @@ export const useTableStore = create(
         set({ tables: defaultTables });
       },
     }),
-    {
-      name: 'paladar-tables-storage',
-    }
+    { name: 'paladar-tables-storage-v2', version: 1 }
   )
 );

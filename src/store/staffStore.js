@@ -30,6 +30,6 @@ export const useStaffStore = create(
         ]
       }))
     }),
-    { name: 'paladar-staff-storage' }
+    { name: 'paladar-staff-storage-v2' }
   )
 );
