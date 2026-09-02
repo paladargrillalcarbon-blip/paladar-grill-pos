@@ -33,13 +33,16 @@ export const ROLES = {
 // Rutas permitidas por rol
 export const ROLE_ROUTES = {
   superadmin: 'all', // todas las rutas
-  admin:      ['/', '/pos', '/orders', '/inventory', '/menu', '/recipes', '/promotions', '/staff', '/finance', '/suppliers', '/purchases'],
-  cajero:     ['/', '/pos', '/orders'],
+  admin:      ['/', '/pos', '/orders', '/inventory', '/menu', '/recipes', '/promotions', '/staff', '/finance', '/suppliers', '/purchases', '/loyalty'],
+  cajero:     ['/', '/pos', '/orders', '/loyalty'],
   mesero:     ['/pos', '/orders'],
 };
 
 // Permisos granulares (acciones específicas)
 export const PERMISSIONS = {
+  // Fidelización
+  manageLoyalty:      ['superadmin', 'admin', 'cajero'],
+
   // Caja
   openCloseRegister:  ['superadmin', 'admin', 'cajero'],
   processPayment:     ['superadmin', 'admin', 'cajero'],

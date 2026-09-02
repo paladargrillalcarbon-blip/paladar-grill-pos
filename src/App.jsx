@@ -4,6 +4,7 @@ import Topbar  from './layout/Topbar.jsx';
 import { useAuthStore } from './store/authStore';
 import Login from './modules/auth/Login.jsx';
 import ProtectedRoute from './components/ProtectedRoute.jsx';
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 
 // Módulos
 import Dashboard  from './modules/dashboard/Dashboard.jsx';
@@ -18,6 +19,7 @@ import Finance    from './modules/finance/Finance.jsx';
 import Suppliers  from './modules/suppliers/Suppliers.jsx';
 import DailyPurchases from './modules/purchases/DailyPurchases.jsx';
 import Settings   from './modules/settings/Settings.jsx';
+import Loyalty    from './modules/loyalty/Loyalty.jsx';
 
 export default function App() {
   const { activeUser } = useAuthStore();
@@ -33,18 +35,19 @@ export default function App() {
         <Topbar />
         <main className="page-container">
           <Routes>
-            <Route path="/"           element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-            <Route path="/pos"        element={<ProtectedRoute><POS /></ProtectedRoute>} />
-            <Route path="/orders"     element={<ProtectedRoute><Orders /></ProtectedRoute>} />
-            <Route path="/inventory"  element={<ProtectedRoute><Inventory /></ProtectedRoute>} />
-            <Route path="/menu"       element={<ProtectedRoute><Menu /></ProtectedRoute>} />
-            <Route path="/recipes"    element={<ProtectedRoute><Recipes /></ProtectedRoute>} />
-            <Route path="/promotions" element={<ProtectedRoute><Promotions /></ProtectedRoute>} />
-            <Route path="/staff"      element={<ProtectedRoute><Staff /></ProtectedRoute>} />
-            <Route path="/finance"    element={<ProtectedRoute><Finance /></ProtectedRoute>} />
-            <Route path="/suppliers"  element={<ProtectedRoute><Suppliers /></ProtectedRoute>} />
-            <Route path="/purchases"  element={<ProtectedRoute><DailyPurchases /></ProtectedRoute>} />
-            <Route path="/settings"   element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/"           element={<ErrorBoundary><ProtectedRoute><Dashboard /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/pos"        element={<ErrorBoundary><ProtectedRoute><POS /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/orders"     element={<ErrorBoundary><ProtectedRoute><Orders /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/inventory"  element={<ErrorBoundary><ProtectedRoute><Inventory /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/menu"       element={<ErrorBoundary><ProtectedRoute><Menu /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/recipes"    element={<ErrorBoundary><ProtectedRoute><Recipes /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/promotions" element={<ErrorBoundary><ProtectedRoute><Promotions /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/staff"      element={<ErrorBoundary><ProtectedRoute><Staff /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/finance"    element={<ErrorBoundary><ProtectedRoute><Finance /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/suppliers"  element={<ErrorBoundary><ProtectedRoute><Suppliers /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/purchases"  element={<ErrorBoundary><ProtectedRoute><DailyPurchases /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/settings"   element={<ErrorBoundary><ProtectedRoute><Settings /></ProtectedRoute></ErrorBoundary>} />
+            <Route path="/loyalty"    element={<ErrorBoundary><ProtectedRoute><Loyalty /></ProtectedRoute></ErrorBoundary>} />
           </Routes>
         </main>
       </div>

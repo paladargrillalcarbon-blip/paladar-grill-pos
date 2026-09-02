@@ -89,6 +89,18 @@ export const useInventoryStore = create(
             const totalQty = ing.quantity * actualQuantity;
             moves.push({ ingredientId: ing.ingredientId, qty: totalQty });
           });
+
+          // Consumir sub-productos del combo
+          if (item.comboDetails) {
+            [item.comboDetails.sideId, item.comboDetails.drinkId].forEach(subProdId => {
+              const subProduct = products.find(p => p.id === subProdId);
+              if (subProduct && subProduct.ingredients) {
+                subProduct.ingredients.forEach(ing => {
+                  moves.push({ ingredientId: ing.ingredientId, qty: ing.quantity * actualQuantity });
+                });
+              }
+            });
+          }
         });
 
         set((s) => {

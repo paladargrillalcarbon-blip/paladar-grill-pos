@@ -4,13 +4,19 @@ import { usePosStore } from '../../store/posStore';
 import { useOrdersStore } from '../../store/ordersStore';
 import { useFinanceStore } from '../../store/financeStore';
 import { useStaffStore } from '../../store/staffStore';
-import { formatCOP } from '../../utils/currency';
 
-// Formatea número con puntos de miles al estilo colombiano
 function fmtCOP(num) {
-  if (isNaN(num) || num === null || num === undefined) return '$ 0';
-  return '$ ' + Math.round(num).toLocaleString('es-CO');
+  const n = Number(num);
+  if (isNaN(n)) return '$ 0';
+  return '$ ' + Math.round(n).toLocaleString('es-CO');
 }
+
+const PAYMENT_METHODS = [
+  { id: 'cash',       label: '💵 Efectivo',   color: '#f59e0b' },
+  { id: 'card',       label: '💳 Tarjeta',    color: '#3b82f6' },
+  { id: 'nequi',      label: '📱 Nequi',      color: '#8b5cf6' },
+  { id: 'daviplata',  label: '📲 Daviplata',  color: '#10b981' },
+];
 
 export default function CashCloseModal({ onClose }) {
   const cashSession    = usePosStore((s) => s.cashSession);
@@ -21,45 +27,62 @@ export default function CashCloseModal({ onClose }) {
   const dailyPurchases = useFinanceStore((s) => s.dailyPurchases);
   const staff          = useStaffStore((s) => s.staff);
 
-  const [step, setStep]                   = useState(cashSession ? 'close' : 'open');
-  const [openingBase, setOpeningBase]     = useState('100000');
+  const [step, setStep]               = useState(cashSession ? 'close' : 'open');
+  const [openingBase, setOpeningBase] = useState('100000');
   const [selectedStaff, setSelectedStaff] = useState(cashSession?.openedBy || '');
-  // rawCash guarda SOLO dígitos, ej: "100000"
-  const [rawCash, setRawCash]             = useState('');
-  const [closed, setClosed]               = useState(false);
-  const [closingData, setClosingData]     = useState(null);
+  const [closed, setClosed]           = useState(false);
+  const [closingData, setClosingData] = useState(null);
+
+  // Conteos ingresados por el cajero para cada método
+  const [counted, setCounted] = useState({
+    cash: '',
+    card: '',
+    nequi: '',
+    daviplata: '',
+  });
 
   /* ── Calcular ventas del día ── */
   const today = new Date().toISOString().split('T')[0];
 
-  const todaysOrders = orders.filter(
+  const todaysOrders = (orders || []).filter(
     (o) => o.createdAt?.startsWith(today) && o.paymentStatus === 'paid'
   );
 
-  let salesCash = 0, salesCard = 0, salesNequi = 0, salesDaviplata = 0, totalSales = 0, totalTips = 0;
+  const salesByMethod = { cash: 0, card: 0, nequi: 0, daviplata: 0 };
+  let totalSales = 0;
+  let totalTips  = 0;
+
   todaysOrders.forEach((order) => {
     totalSales += Number(order.totals?.grandTotal) || 0;
     totalTips  += Number(order.tip) || 0;
     (order.payments || []).forEach((p) => {
       const amt = Number(p.amount) || 0;
-      if (p.method === 'cash')      salesCash      += amt;
-      if (p.method === 'card')      salesCard      += amt;
-      if (p.method === 'nequi')     salesNequi     += amt;
-      if (p.method === 'daviplata') salesDaviplata += amt;
+      if (salesByMethod[p.method] !== undefined) salesByMethod[p.method] += amt;
     });
   });
 
-  const cashExpenses = dailyPurchases
+  const cashExpenses = (dailyPurchases || [])
     .filter((p) => p.date?.startsWith(today) && p.paymentMethod === 'cash')
     .reduce((s, p) => s + (Number(p.amount) || 0), 0);
 
-  // Efectivo esperado = base inicial + ventas en efectivo - gastos en efectivo
-  const initialAmount  = Number(cashSession?.initialAmount) || 0;
-  const expectedCash   = initialAmount + salesCash - cashExpenses;
+  const initialAmount = Number(cashSession?.initialAmount) || 0;
 
-  // Monto contado ingresado por el usuario (solo dígitos)
-  const countedAmount  = rawCash.length > 0 ? Number(rawCash) : null;
-  const diff           = countedAmount !== null ? countedAmount - expectedCash : null;
+  // Efectivo esperado = base + ventas efectivo - gastos
+  const expectedByMethod = {
+    cash:      initialAmount + salesByMethod.cash - cashExpenses,
+    card:      salesByMethod.card,
+    nequi:     salesByMethod.nequi,
+    daviplata: salesByMethod.daviplata,
+  };
+
+  // Diferencias por método
+  const getDiff = (methodId) => {
+    const val = counted[methodId];
+    if (val === '' || val === undefined) return null;
+    return Number(val) - expectedByMethod[methodId];
+  };
+
+  const allEntered = PAYMENT_METHODS.every(m => counted[m.id] !== '');
 
   /* ── Handlers ── */
   const handleOpen = () => {
@@ -69,29 +92,44 @@ export default function CashCloseModal({ onClose }) {
   };
 
   const handleClose = () => {
-    const data = {
-      openedAt:    cashSession.openedAt,
-      openedBy:    cashSession.openedBy,
-      closedAt:    new Date().toISOString(),
-      initialBase: initialAmount,
-      sales: {
-        total:     totalSales,
-        cash:      salesCash,
-        card:      salesCard,
-        nequi:     salesNequi,
-        daviplata: salesDaviplata,
-      },
-      tips:         totalTips,
-      cashExpenses: cashExpenses,
-      expectedCash: expectedCash,
-      countedCash:  countedAmount,
-      difference:   diff,
-      ordersCount:  todaysOrders.length,
+    const sessionOpenedAt  = cashSession?.openedAt       || new Date().toISOString();
+    const sessionOpenedBy  = cashSession?.openedBy       || '';
+    const sessionInitial   = cashSession?.initialAmount  || 0;
+
+    const countedValues = {
+      cash:      Number(counted.cash)      || 0,
+      card:      Number(counted.card)      || 0,
+      nequi:     Number(counted.nequi)     || 0,
+      daviplata: Number(counted.daviplata) || 0,
     };
-    addCashClosing(data);
-    closeSession();
+
+    const diffs = {
+      cash:      countedValues.cash      - expectedByMethod.cash,
+      card:      countedValues.card      - expectedByMethod.card,
+      nequi:     countedValues.nequi     - expectedByMethod.nequi,
+      daviplata: countedValues.daviplata - expectedByMethod.daviplata,
+    };
+
+    const data = {
+      openedAt:       sessionOpenedAt,
+      openedBy:       sessionOpenedBy,
+      closedAt:       new Date().toISOString(),
+      initialBase:    sessionInitial,
+      sales:          { total: totalSales, ...salesByMethod },
+      tips:           totalTips,
+      cashExpenses,
+      expectedByMethod,
+      countedByMethod: countedValues,
+      diffByMethod:   diffs,
+      ordersCount:    todaysOrders.length,
+    };
+
     setClosingData(data);
     setClosed(true);
+    setTimeout(() => {
+      addCashClosing(data);
+      closeSession();
+    }, 0);
   };
 
   const handlePrint = () => {
@@ -100,62 +138,56 @@ export default function CashCloseModal({ onClose }) {
     const openedAt    = new Date(closingData.openedAt).toLocaleString('es-CO');
     const closedAt    = new Date(closingData.closedAt).toLocaleString('es-CO');
 
-    const html = `<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8"/>
-  <title>Cierre de Caja — Paladar Grill</title>
-  <style>
-    body { font-family: 'Courier New', monospace; font-size: 13px; max-width: 320px; margin: 0 auto; padding: 16px; }
-    h1   { font-size: 16px; text-align: center; margin-bottom: 4px; }
-    .center { text-align: center; }
-    .divider { border-top: 1px dashed #000; margin: 8px 0; }
-    .row { display: flex; justify-content: space-between; margin: 4px 0; }
-    .bold { font-weight: bold; }
-    .big  { font-size: 15px; font-weight: bold; }
-    .red  { color: red; }
-    .diff-ok  { color: green; }
-    .diff-bad { color: red; }
-  </style>
-</head>
-<body>
-  <h1>PALADAR GRILL</h1>
-  <p class="center">CIERRE DE CAJA</p>
-  <p class="center">${closedAt}</p>
-  <div class="divider"></div>
-  <div class="row"><span>Cajero:</span><span>${cashierName}</span></div>
-  <div class="row"><span>Apertura:</span><span>${openedAt}</span></div>
-  <div class="row"><span>Pedidos cobrados:</span><span>${closingData.ordersCount}</span></div>
-  <div class="divider"></div>
-  <p class="bold">VENTAS POR MÉTODO</p>
-  <div class="row"><span>Efectivo:</span><span>${fmtCOP(closingData.sales.cash)}</span></div>
-  <div class="row"><span>Tarjeta:</span><span>${fmtCOP(closingData.sales.card)}</span></div>
-  <div class="row"><span>Nequi:</span><span>${fmtCOP(closingData.sales.nequi)}</span></div>
-  <div class="row"><span>Daviplata:</span><span>${fmtCOP(closingData.sales.daviplata)}</span></div>
-  <div class="divider"></div>
-  <div class="row bold"><span>TOTAL VENTAS:</span><span>${fmtCOP(closingData.sales.total)}</span></div>
-  <div class="row"><span>Propinas:</span><span>${fmtCOP(closingData.tips)}</span></div>
-  ${closingData.cashExpenses > 0 ? `
-  <div class="divider"></div>
-  <p class="bold">GASTOS EN EFECTIVO</p>
-  <div class="row red"><span>- Gastos del día:</span><span>-${fmtCOP(closingData.cashExpenses)}</span></div>` : ''}
-  <div class="divider"></div>
-  <p class="bold">CUADRE DE CAJA</p>
-  <div class="row"><span>Base inicial:</span><span>${fmtCOP(closingData.initialBase)}</span></div>
-  <div class="row"><span>+ Ventas efectivo:</span><span>${fmtCOP(closingData.sales.cash)}</span></div>
-  ${closingData.cashExpenses > 0 ? `<div class="row red"><span>- Gastos efectivo:</span><span>-${fmtCOP(closingData.cashExpenses)}</span></div>` : ''}
-  <div class="row bold"><span>= Esperado en caja:</span><span>${fmtCOP(closingData.expectedCash)}</span></div>
-  <div class="row"><span>Efectivo contado:</span><span>${fmtCOP(closingData.countedCash)}</span></div>
-  <div class="row big ${closingData.difference === 0 ? 'diff-ok' : 'diff-bad'}">
-    <span>DIFERENCIA:</span>
-    <span>${closingData.difference > 0 ? '+' : ''}${fmtCOP(closingData.difference)} ${closingData.difference > 0 ? '(Sobrante)' : closingData.difference < 0 ? '(Faltante)' : '(Cuadre Perfecto)'}</span>
-  </div>
-  <div class="divider"></div>
-  <p class="center" style="font-size:11px;">Generado por POS Paladar Grill</p>
-</body>
-</html>`;
+    const methodRows = PAYMENT_METHODS.map(m => {
+      const expected = closingData.expectedByMethod[m.id] || 0;
+      const counted  = closingData.countedByMethod[m.id]  || 0;
+      const diff     = closingData.diffByMethod[m.id]     || 0;
+      const diffStr  = diff === 0 ? 'CUADRA' : diff > 0 ? `+${fmtCOP(diff)} (Sobrante)` : `${fmtCOP(diff)} (Faltante)`;
+      const diffColor = diff === 0 ? 'green' : diff > 0 ? 'orange' : 'red';
+      return `
+        <tr>
+          <td>${m.label}</td>
+          <td style="text-align:right">${fmtCOP(expected)}</td>
+          <td style="text-align:right">${fmtCOP(counted)}</td>
+          <td style="text-align:right; color:${diffColor}; font-weight:bold">${diffStr}</td>
+        </tr>`;
+    }).join('');
 
-    const win = window.open('', '_blank', 'width=400,height=650');
+    const html = `<!DOCTYPE html>
+<html lang="es"><head><meta charset="UTF-8"/>
+<title>Cierre de Caja — Paladar Grill</title>
+<style>
+  body { font-family:'Courier New',monospace; font-size:13px; max-width:400px; margin:0 auto; padding:16px; }
+  h1 { font-size:16px; text-align:center; }
+  .center { text-align:center; }
+  .divider { border-top:1px dashed #000; margin:8px 0; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { text-align:left; border-bottom:1px solid #000; padding:3px 0; }
+  td { padding:4px 2px; }
+  .bold { font-weight:bold; }
+</style></head><body>
+<h1>PALADAR GRILL</h1>
+<p class="center">CIERRE DE CAJA</p>
+<p class="center">${closedAt}</p>
+<div class="divider"></div>
+<div class="bold">Cajero: ${cashierName}</div>
+<div>Apertura: ${openedAt}</div>
+<div>Pedidos cobrados: ${closingData.ordersCount}</div>
+<div class="divider"></div>
+<p class="bold">CUADRE POR MÉTODO DE PAGO</p>
+<table>
+  <tr><th>Método</th><th style="text-align:right">Esperado</th><th style="text-align:right">Contado</th><th style="text-align:right">Diferencia</th></tr>
+  ${methodRows}
+</table>
+<div class="divider"></div>
+<div class="bold">Ventas totales del día: ${fmtCOP(closingData.sales.total)}</div>
+<div>Propinas: ${fmtCOP(closingData.tips)}</div>
+${closingData.cashExpenses > 0 ? `<div>Gastos en efectivo: -${fmtCOP(closingData.cashExpenses)}</div>` : ''}
+<div class="divider"></div>
+<p class="center" style="font-size:11px;">Generado por POS Paladar Grill</p>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=450,height=650');
     win.document.write(html);
     win.document.close();
     win.focus();
@@ -163,15 +195,32 @@ export default function CashCloseModal({ onClose }) {
   };
 
   /* ── PANTALLA DE ÉXITO ── */
-  if (closed) {
+  if (closed && closingData) {
     return (
       <div className="modal-backdrop">
-        <div className="modal-content" style={{ maxWidth: 380 }}>
+        <div className="modal-content" style={{ maxWidth: 420 }}>
           <div className="modal-body" style={{ textAlign: 'center', padding: '2.5rem 2rem' }}>
-            <CheckCircle size={64} style={{ color: 'var(--success)', margin: '0 auto 1rem' }} />
-            <h2 className="text-xl font-bold mb-2">¡Caja Cerrada!</h2>
-            <p className="text-muted mb-6">El reporte ha sido guardado en Finanzas.</p>
-            <div className="flex gap-2 justify-center">
+            <CheckCircle size={64} style={{ color: '#22c55e', margin: '0 auto 1rem' }} />
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, marginBottom: 8 }}>¡Caja Cerrada!</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>El reporte ha sido guardado en Finanzas.</p>
+
+            {/* Resumen de diferencias */}
+            <div style={{ textAlign: 'left', marginBottom: 20 }}>
+              {PAYMENT_METHODS.map(m => {
+                const diff = closingData.diffByMethod[m.id];
+                const diffColor = diff === 0 ? '#22c55e' : diff > 0 ? '#f59e0b' : '#ef4444';
+                return (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid var(--border)', fontSize: '0.9rem' }}>
+                    <span>{m.label}</span>
+                    <span style={{ fontWeight: 700, color: diffColor }}>
+                      {diff === 0 ? '✔ Cuadra' : diff > 0 ? `+${fmtCOP(diff)} Sobrante` : `${fmtCOP(diff)} Faltante`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
               <button className="btn btn-secondary" onClick={handlePrint}>
                 <Printer size={16} /> Imprimir Reporte
               </button>
@@ -184,12 +233,9 @@ export default function CashCloseModal({ onClose }) {
   }
 
   /* ── FORMULARIO PRINCIPAL ── */
-  const diffColor = diff === null ? '' : diff === 0 ? 'text-success' : diff > 0 ? 'text-warning' : 'text-danger';
-  const diffBg    = diff === null ? '' : diff === 0 ? 'bg-success/10 border-success' : diff > 0 ? 'bg-warning/10 border-warning' : 'bg-danger/10 border-danger';
-
   return (
     <div className="modal-backdrop">
-      <div className="modal-content" style={{ maxWidth: 480 }}>
+      <div className="modal-content" style={{ maxWidth: 520 }}>
         <div className="modal-header">
           <h2 className="modal-title">
             {step === 'open' ? '🟢 Abrir Caja' : '🔴 Cierre de Caja'}
@@ -210,7 +256,7 @@ export default function CashCloseModal({ onClose }) {
                   onChange={(e) => setSelectedStaff(e.target.value)}
                 >
                   <option value="">Seleccionar...</option>
-                  {staff.map((s) => (
+                  {(staff || []).map((s) => (
                     <option key={s.id} value={s.id}>{s.name} ({s.role})</option>
                   ))}
                 </select>
@@ -229,7 +275,9 @@ export default function CashCloseModal({ onClose }) {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              <div className="grid-2">
+
+              {/* Resumen del día */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div className="card p-3 border-light">
                   <div className="text-xs text-muted mb-1">Base Inicial</div>
                   <div className="font-bold">{fmtCOP(initialAmount)}</div>
@@ -240,75 +288,70 @@ export default function CashCloseModal({ onClose }) {
                 </div>
               </div>
 
+              {/* Ventas esperadas por método */}
               <div className="card p-3 border-light">
-                <div className="text-xs text-muted font-bold uppercase mb-2">Ventas por Método de Pago</div>
-                <div className="flex justify-between text-sm py-1"><span>💵 Efectivo</span><span className="font-bold">{fmtCOP(salesCash)}</span></div>
-                <div className="flex justify-between text-sm py-1"><span>💳 Tarjeta</span><span className="font-bold">{fmtCOP(salesCard)}</span></div>
-                <div className="flex justify-between text-sm py-1"><span>📱 Nequi</span><span className="font-bold">{fmtCOP(salesNequi)}</span></div>
-                <div className="flex justify-between text-sm py-1"><span>📲 Daviplata</span><span className="font-bold">{fmtCOP(salesDaviplata)}</span></div>
-                <div className="border-t border-border mt-2 pt-2 flex justify-between font-extrabold">
-                  <span>Ventas totales</span>
-                  <span className="text-accent">{fmtCOP(totalSales)}</span>
+                <div style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: 8, color: 'var(--text-muted)' }}>
+                  Ventas del Sistema (esperado)
+                </div>
+                {PAYMENT_METHODS.map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '0.9rem' }}>
+                    <span>{m.label}</span>
+                    <span style={{ fontWeight: 700 }}>{fmtCOP(expectedByMethod[m.id])}</span>
+                  </div>
+                ))}
+                <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 8, display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}>
+                  <span>Total ventas</span>
+                  <span style={{ color: 'var(--accent)' }}>{fmtCOP(totalSales)}</span>
                 </div>
               </div>
 
+              {/* Ingreso de lo contado por método */}
               <div className="card p-3 border-light">
-                <div className="flex justify-between items-center">
-                  <span className="font-bold">Efectivo esperado en caja</span>
-                  <span className="font-bold text-accent">{fmtCOP(expectedCash)}</span>
+                <div style={{ fontWeight: 700, fontSize: '0.8rem', textTransform: 'uppercase', marginBottom: 10, color: 'var(--text-muted)' }}>
+                  <Calculator size={13} style={{ display: 'inline', marginRight: 4 }} />
+                  Ingrese lo contado por cada método
                 </div>
-                <div className="text-xs text-muted mt-1">
-                  Base inicial + ventas efectivo{cashExpenses > 0 ? ` − gastos efectivo (${fmtCOP(cashExpenses)})` : ''}
-                </div>
+                {PAYMENT_METHODS.map(m => {
+                  const diff = getDiff(m.id);
+                  const diffColor = diff === null ? 'var(--text-muted)' : diff === 0 ? '#22c55e' : diff > 0 ? '#f59e0b' : '#ef4444';
+                  return (
+                    <div key={m.id} style={{ marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <label style={{ fontWeight: 600, fontSize: '0.9rem' }}>{m.label}</label>
+                        {diff !== null && (
+                          <span style={{ fontSize: '0.8rem', fontWeight: 700, color: diffColor }}>
+                            {diff === 0 ? '✔ Cuadra' : diff > 0 ? `+${fmtCOP(diff)} Sobrante` : `${fmtCOP(diff)} Faltante`}
+                          </span>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        className="form-input w-full"
+                        placeholder={`Esperado: ${fmtCOP(expectedByMethod[m.id])}`}
+                        value={counted[m.id]}
+                        autoComplete="off"
+                        onChange={(e) => setCounted(prev => ({
+                          ...prev,
+                          [m.id]: e.target.value.replace(/[^0-9]/g, '')
+                        }))}
+                      />
+                    </div>
+                  );
+                })}
               </div>
 
-              {/* ── Campo de ingreso del efectivo contado ── */}
-              <div>
-                <label className="block text-sm font-bold mb-1">
-                  <Calculator size={13} className="inline mr-1" />
-                  Efectivo Real Contado
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  className="form-input w-full text-xl font-bold"
-                  placeholder="Ej: 124732"
-                  value={rawCash}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  autoCapitalize="off"
-                  spellCheck={false}
-                  onChange={(e) => {
-                    const onlyDigits = e.target.value.replace(/\D/g, '');
-                    setRawCash(onlyDigits);
-                  }}
-                />
-                {rawCash.length > 0 && (
-                  <div className="text-sm font-bold text-accent mt-1 text-right">
-                    Valor ingresado: {fmtCOP(Number(rawCash))}
-                  </div>
-                )}
-              </div>
+              {cashExpenses > 0 && (
+                <div style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '8px 12px', fontSize: '0.9rem' }}>
+                  ⚠️ Gastos en efectivo del día: <strong>-{fmtCOP(cashExpenses)}</strong> (ya descontados del esperado en efectivo)
+                </div>
+              )}
 
-              {/* ── Resultado del cuadre ── */}
-              <div className={`card p-4 text-center border-2 ${diff === null ? 'border-border' : diffBg}`}>
-                <div className="text-xs font-bold uppercase mb-2 opacity-70">Resultado del Cuadre</div>
-                {diff === null ? (
-                  <div className="text-muted font-bold">Ingrese el efectivo contado arriba...</div>
-                ) : (
-                  <div className={diffColor}>
-                    <div style={{ fontSize: '2rem', fontWeight: 900, lineHeight: 1.1 }}>
-                      {diff > 0 ? '+ ' : diff < 0 ? '- ' : ''}{fmtCOP(Math.abs(diff))}
-                    </div>
-                    <div style={{ fontSize: '1rem', fontWeight: 700, marginTop: 6 }}>
-                      {diff > 0 ? '▲ SOBRANTE EN CAJA' : diff < 0 ? '▼ FALTANTE EN CAJA' : '✔ CUADRE PERFECTO'}
-                    </div>
-                    <div style={{ fontSize: '0.8rem', marginTop: 4, opacity: 0.7 }}>
-                      Esperado: {fmtCOP(expectedCash)} · Contado: {fmtCOP(countedAmount)}
-                    </div>
-                  </div>
-                )}
-              </div>
+              {!allEntered && (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  Ingrese todos los valores para habilitar el cierre
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -327,7 +370,7 @@ export default function CashCloseModal({ onClose }) {
             <button
               className="btn btn-danger"
               onClick={handleClose}
-              disabled={rawCash.length === 0}
+              disabled={!allEntered}
             >
               🔴 Confirmar Cierre
             </button>

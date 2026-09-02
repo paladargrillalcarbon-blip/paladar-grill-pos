@@ -2,7 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useMemo } from 'react';
 import {
   LayoutDashboard, ShoppingCart, ClipboardList, Package,
-  BookOpen, Users, DollarSign, Truck, Tag, Settings, LogOut, Receipt, FlaskConical,
+  BookOpen, Users, DollarSign, Truck, Tag, Settings, LogOut, Receipt, FlaskConical, Gift,
 } from 'lucide-react';
 import { useOrdersStore } from '../store/ordersStore';
 import { useInventoryStore } from '../store/inventoryStore';
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
       { to: '/menu',      label: 'Menú & Productos', icon: BookOpen },
       { to: '/recipes',   label: 'Recetas',          icon: FlaskConical },
       { to: '/promotions',label: 'Promociones',     icon: Tag },
+      { to: '/loyalty',   label: 'Fidelización',     icon: Gift },
     ],
   },
   {

@@ -39,6 +39,22 @@ export const usePosStore = create(
         products: s.products.filter(p => p.id !== id)
       })),
 
+      // --- MODIFICADORES CRUD ---
+      addModifier: (modifier) => set((s) => ({
+        modifiers: [...s.modifiers, { ...modifier, id: `mod-${Date.now()}` }]
+      })),
+      updateModifier: (id, modData) => set((s) => ({
+        modifiers: s.modifiers.map(m => m.id === id ? { ...m, ...modData } : m)
+      })),
+      deleteModifier: (id) => set((s) => ({
+        modifiers: s.modifiers.filter(m => m.id !== id)
+      })),
+
+      // --- CONFIG CRUD ---
+      updateConfig: (newConfig) => set((s) => ({
+        config: { ...s.config, ...newConfig }
+      })),
+
       // --- PROMOCIONES CRUD ---
       promotions: seedPromotions,
       addPromotion: (promo) => set((s) => ({
@@ -61,6 +77,7 @@ export const usePosStore = create(
         type: 'local', // local | takeaway | own_delivery | rappi | ifood | pedidosya
         tableNumber: '',
         customerName: '',
+        customerId: null, // Asociar con cliente fidelizado
         deliveryAddress: '',
         platform: null,
         platformOrderId: '',
@@ -78,22 +95,36 @@ export const usePosStore = create(
       setOrderMeta: (meta) =>
         set((s) => ({ currentOrder: { ...s.currentOrder, ...meta } })),
 
-      addItem: (product, modifiers = [], promotion = null, note = '') => {
+      addItem: (product, customization = { selectedModifiers: [], comboDetails: null }, promotion = null, note = '', quantity = 1) => {
         let discountAmount = 0;
         let appliedPromo = null;
 
+        let finalPrice = product.price;
+        if (customization.comboDetails) {
+          finalPrice += customization.comboDetails.priceDelta || 0;
+        }
+        
+        const allModifiers = get().modifiers || [];
+        customization.selectedModifiers?.forEach(modId => {
+          const mod = allModifiers.find(m => m.id === modId);
+          if (mod && mod.priceDelta) {
+            finalPrice += mod.priceDelta;
+          }
+        });
+
         if (promotion) {
-          discountAmount = calcItemDiscount(promotion, { price: product.price, quantity: 1 });
+          discountAmount = calcItemDiscount(promotion, { price: finalPrice, quantity: 1 });
           appliedPromo = promotion.id;
         }
 
         const newItem = {
-          id: `item-${Date.now()}`,
+          id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
           productId: product.id,
           name: product.name,
-          price: product.price,
-          quantity: 1,
-          modifiers,
+          price: finalPrice,
+          quantity: Math.max(1, Number(quantity) || 1),
+          modifiers: customization.selectedModifiers || [],
+          comboDetails: customization.comboDetails || null,
           promotionId: appliedPromo,
           discountAmount,
           note,
@@ -163,7 +194,7 @@ export const usePosStore = create(
       clearOrder: () =>
         set((s) => ({
           currentOrder: {
-            id: null, type: 'local', tableNumber: '', customerName: '',
+            id: null, type: 'local', tableNumber: '', customerName: '', customerId: null,
             deliveryAddress: '', platform: null, platformOrderId: '',
             items: [], tip: 0, tipMode: null, splitCount: 1, notes: '',
           },
@@ -176,6 +207,7 @@ export const usePosStore = create(
             type: order.type || 'local',
             tableNumber: order.tableNumber || '',
             customerName: order.customerName || '',
+            customerId: order.customerId || null,
             deliveryAddress: order.deliveryAddress || '',
             platformOrderId: order.platformOrderId || '',
             items: order.items || [],

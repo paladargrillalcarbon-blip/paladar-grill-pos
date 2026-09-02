@@ -835,6 +835,31 @@ p  { color: var(--text-secondary); }
 
 .recharts-default-tooltip { box-shadow: none !important; }
 
+/* ─── BORDER & PADDING UTILS ─────────────────────────────────────── */
+.border-b       { border-bottom: 1px solid var(--border); }
+.border-t       { border-top: 1px solid var(--border); }
+.border-light   { border-color: var(--border-light); }
+.border-border  { border-color: var(--border); }
+.pb-4           { padding-bottom: var(--space-4); }
+.pt-4           { padding-top: var(--space-4); }
+.p-3            { padding: var(--space-3); }
+.p-4            { padding: var(--space-4); }
+.p-6            { padding: var(--space-6); }
+.rounded-xl     { border-radius: var(--radius-xl); }
+.rounded-lg     { border-radius: var(--radius-lg); }
+.flex-shrink-0  { flex-shrink: 0; }
+.list-disc      { list-style-type: disc; }
+.list-inside    { list-style-position: inside; }
+.justify-start  { justify-content: flex-start; }
+.uppercase      { text-transform: uppercase; }
+
+/* Form group */
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .sidebar { width: var(--sidebar-collapsed); }
