@@ -1,41 +1,80 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 
-// Default initial users for a fresh system
-const initialUsers = [];
+export const useAuthStore = create((set, get) => ({
+  activeUser: null, // User object if logged in, null otherwise
+  loading: true,
+  isSetupMode: false,
 
-export const useAuthStore = create(
-  persist(
-    (set, get) => ({
-      users: initialUsers,
-      activeUser: null, // User object if logged in, null otherwise
+  // Check initial state (are there any users?)
+  checkSetupMode: async () => {
+    set({ loading: true });
+    try {
+      const { data, error, count } = await supabase
+        .from('staff')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      
+      set({ isSetupMode: count === 0, loading: false });
+    } catch (err) {
+      console.error('Error checking setup mode:', err);
+      set({ loading: false });
+    }
+  },
 
-      login: (username, password) => {
-        const user = get().users.find(u => u.username === username && u.password === password);
-        if (user) {
-          set({ activeUser: user });
-          return { success: true, user };
-        }
-        return { success: false, error: 'Usuario o contraseña incorrectos.' };
-      },
+  // Login using pin code
+  login: async (pin_code) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .eq('is_active', true)
+        .eq('pin_code', pin_code)
+        .single();
 
-      logout: () => {
-        set({ activeUser: null });
-      },
+      if (error || !data) {
+        set({ loading: false });
+        return { success: false, error: 'PIN incorrecto o usuario inactivo.' };
+      }
 
-      // User Management (superadmin only, UI handles permission check)
-      addUser: (user) => set((s) => ({
-        users: [...s.users, { ...user, id: `usr-${Date.now()}` }]
-      })),
+      set({ activeUser: data, loading: false });
+      return { success: true, user: data };
+    } catch (err) {
+      console.error('Login error:', err);
+      set({ loading: false });
+      return { success: false, error: 'Error al conectar con la base de datos.' };
+    }
+  },
 
-      updateUser: (id, userData) => set((s) => ({
-        users: s.users.map(u => u.id === id ? { ...u, ...userData } : u)
-      })),
+  logout: () => {
+    set({ activeUser: null });
+  },
 
-      deleteUser: (id) => set((s) => ({
-        users: s.users.filter(u => u.id !== id)
-      })),
-    }),
-    { name: 'paladar-auth-v3' }
-  )
-);
+  // Create first admin (setup mode)
+  createFirstAdmin: async (name, pin_code) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .insert([{
+          nombre: name,
+          rol: 'Administrador', // Rol fijo para el primero
+          pin_code: pin_code,
+          is_active: true
+        }])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set({ activeUser: data, isSetupMode: false, loading: false });
+      return { success: true, user: data };
+    } catch (err) {
+      console.error('Setup error:', err);
+      set({ loading: false });
+      return { success: false, error: 'Error al crear el administrador.' };
+    }
+  }
+}));

@@ -4,11 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useSuppliersStore = create(
   persist(
     (set, get) => ({
-      suppliers: [
-        { id: 'sup-1', name: 'Distribuidora Carnes Premium', contact: 'Carlos López', phone: '3001112233', categories: 'Carnes, Aves', deliveryDays: 'Lunes, Jueves' },
-        { id: 'sup-2', name: 'Fruver El Campesino', contact: 'Doña Rosa', phone: '3102223344', categories: 'Verduras, Frutas', deliveryDays: 'Diario' },
-        { id: 'sup-3', name: 'Panificadora La Espiga', contact: 'Julián', phone: '3203334455', categories: 'Panadería', deliveryDays: 'Lunes, Miércoles, Viernes' }
-      ],
+      suppliers: [],
       purchaseOrders: [], // { id, date, supplierId, totalAmount, status }
 
       addSupplier: (supplier) => set((s) => ({

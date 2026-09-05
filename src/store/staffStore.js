@@ -1,35 +1,111 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 
-export const useStaffStore = create(
-  persist(
-    (set, get) => ({
-      staff: [
-        { id: 'staff-1', name: 'Juan Pérez', role: 'Administrador', salary: 1500000, phone: '3001234567', isActive: true },
-        { id: 'staff-2', name: 'María Gómez', role: 'Cajero', salary: 1300000, phone: '3109876543', isActive: true },
-        { id: 'staff-3', name: 'Carlos Díaz', role: 'Mesero', salary: 1160000, phone: '3205554433', isActive: true }
-      ],
-      payrollRecords: [], // Historial de pagos de nómina { id, date, staffId, amount, type }
+export const useStaffStore = create((set, get) => ({
+  staff: [],
+  loading: false,
+  payrollRecords: [], // Esto podríamos dejarlo local por ahora o migrarlo después
 
-      addStaff: (employee) => set((s) => ({
-        staff: [...s.staff, { ...employee, id: `staff-${Date.now()}` }]
-      })),
+  fetchStaff: async () => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      set({ staff: data || [], loading: false });
+    } catch (err) {
+      console.error('Error fetching staff:', err);
+      set({ loading: false });
+    }
+  },
 
-      updateStaff: (id, employeeData) => set((s) => ({
-        staff: s.staff.map(e => e.id === id ? { ...e, ...employeeData } : e)
-      })),
+  addStaff: async (employee) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .insert([{
+          nombre: employee.nombre,
+          rol: employee.rol,
+          pin_code: employee.pin_code,
+          is_active: employee.is_active !== undefined ? employee.is_active : true
+        }])
+        .select()
+        .single();
 
-      deleteStaff: (id) => set((s) => ({
-        staff: s.staff.filter(e => e.id !== id)
-      })),
+      if (error) throw error;
 
-      recordPayment: (staffId, amount, type = 'Salario Mensual', note = '') => set((s) => ({
-        payrollRecords: [
-          { id: `pay-${Date.now()}`, date: new Date().toISOString(), staffId, amount, type, note },
-          ...s.payrollRecords
-        ]
-      }))
-    }),
-    { name: 'paladar-staff-storage-v2' }
-  )
-);
+      set((s) => ({
+        staff: [data, ...s.staff],
+        loading: false
+      }));
+      return { success: true };
+    } catch (err) {
+      console.error('Error adding staff:', err);
+      set({ loading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
+  updateStaff: async (id, employeeData) => {
+    set({ loading: true });
+    try {
+      const { data, error } = await supabase
+        .from('staff')
+        .update({
+          nombre: employeeData.nombre,
+          rol: employeeData.rol,
+          pin_code: employeeData.pin_code,
+          is_active: employeeData.is_active
+        })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set((s) => ({
+        staff: s.staff.map(e => e.id === id ? data : e),
+        loading: false
+      }));
+      return { success: true };
+    } catch (err) {
+      console.error('Error updating staff:', err);
+      set({ loading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
+  deleteStaff: async (id) => {
+    set({ loading: true });
+    try {
+      const { error } = await supabase
+        .from('staff')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set((s) => ({
+        staff: s.staff.filter(e => e.id !== id),
+        loading: false
+      }));
+      return { success: true };
+    } catch (err) {
+      console.error('Error deleting staff:', err);
+      set({ loading: false });
+      return { success: false, error: err.message };
+    }
+  },
+
+  // Payroll (local for now)
+  recordPayment: (staffId, amount, type = 'Salario Mensual', note = '') => set((s) => ({
+    payrollRecords: [
+      { id: `pay-${Date.now()}`, date: new Date().toISOString(), staffId, amount, type, note },
+      ...s.payrollRecords
+    ]
+  }))
+}));

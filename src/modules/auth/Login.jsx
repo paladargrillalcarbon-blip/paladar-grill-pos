@@ -1,19 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Lock, LogIn, UserPlus } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 
 export default function Login() {
-  const { users, login, addUser, login: directLogin } = useAuthStore();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const { login, createFirstAdmin, checkSetupMode, isSetupMode, loading } = useAuthStore();
+  const [pin, setPin] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
-  const isSetupMode = users.length === 0;
+  useEffect(() => {
+    checkSetupMode();
+  }, [checkSetupMode]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!username || !password) return;
+    if (!pin) return;
+    setError('');
     
     if (isSetupMode) {
       if (!name) {
@@ -21,18 +23,7 @@ export default function Login() {
         return;
       }
       
-      // Register new admin
-      const newAdmin = {
-        name,
-        username,
-        password,
-        role: 'superadmin',
-        isActive: true,
-      };
-      addUser(newAdmin);
-      
-      // Attempt login immediately
-      const result = directLogin(username, password);
+      const result = await createFirstAdmin(name, pin);
       if (!result.success) {
         setError(result.error);
       }
@@ -40,10 +31,10 @@ export default function Login() {
     }
 
     // Normal login
-    const result = login(username, password);
+    const result = await login(pin);
     if (!result.success) {
       setError(result.error);
-      setPassword(''); // Clear password on error
+      setPin(''); // Clear PIN on error
     }
   };
 
@@ -60,7 +51,7 @@ export default function Login() {
           <p className="text-muted mt-2 text-sm leading-relaxed">
             {isSetupMode 
               ? 'Parece que es la primera vez que usas el sistema. Crea tu cuenta de Administrador Principal para comenzar.'
-              : 'Inicia sesión en tu cuenta para continuar.'}
+              : 'Ingresa tu PIN de acceso para continuar.'}
           </p>
         </div>
 
@@ -86,37 +77,25 @@ export default function Login() {
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-bold mb-1">Usuario (Login) *</label>
-            <input
-              type="text"
-              className="form-input w-full"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              placeholder="Ej. admin"
-              autoComplete="username"
-              autoFocus={!isSetupMode}
-            />
-          </div>
-
           <div className="mb-2">
-            <label className="block text-sm font-bold mb-1">Contraseña *</label>
+            <label className="block text-sm font-bold mb-1">{isSetupMode ? 'Crea tu PIN de Acceso *' : 'PIN de Acceso *'}</label>
             <input
               type="password"
-              className="form-input w-full"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-              autoComplete={isSetupMode ? "new-password" : "current-password"}
+              className="form-input w-full text-center text-xl tracking-widest"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="••••"
+              maxLength={8}
+              autoFocus={!isSetupMode}
             />
           </div>
 
           <button 
             type="submit" 
             className="btn btn-primary w-full h-12 text-lg font-bold mt-2"
-            disabled={!username || !password || (isSetupMode && !name)}
+            disabled={!pin || (isSetupMode && !name) || loading}
           >
-            {isSetupMode ? (
+            {loading ? 'Cargando...' : isSetupMode ? (
               <><UserPlus size={18} className="mr-2" /> Crear Administrador</>
             ) : (
               <><LogIn size={18} className="mr-2" /> Entrar al Sistema</>

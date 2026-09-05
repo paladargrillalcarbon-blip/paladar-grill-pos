@@ -4,30 +4,7 @@ import { persist } from 'zustand/middleware';
 export const useLoyaltyStore = create(
   persist(
     (set, get) => ({
-      customers: [
-        {
-          id: 'cust-1',
-          name: 'Rodrigo Sotelo',
-          phone: '3001234567',
-          email: 'rodrigo@gmail.com',
-          points: 150,
-          createdAt: new Date().toISOString(),
-          history: [
-            { id: 'hist-1', type: 'accumulation', points: 150, date: new Date().toISOString(), description: 'Compra inicial POS' }
-          ]
-        },
-        {
-          id: 'cust-2',
-          name: 'Andrea Morales',
-          phone: '3109876543',
-          email: 'andrea@gmail.com',
-          points: 50,
-          createdAt: new Date().toISOString(),
-          history: [
-            { id: 'hist-2', type: 'accumulation', points: 50, date: new Date().toISOString(), description: 'Compra POS' }
-          ]
-        }
-      ],
+      customers: [],
 
       rewards: [
         { id: 'rew-1', name: 'Gaseosa Personal', pointsCost: 50, stock: 100, isActive: true },

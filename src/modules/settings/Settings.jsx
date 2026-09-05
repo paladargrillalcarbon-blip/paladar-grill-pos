@@ -12,7 +12,7 @@ import { ROLES } from '../../utils/permissions';
 
 export default function Settings() {
   const { config, updateConfig } = usePosStore();
-  const { users, addUser, updateUser, deleteUser, activeUser } = useAuthStore();
+  const { activeUser } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState('empresa'); // 'empresa' | 'factura' | 'legal' | 'usuarios'
   const [savedNotice, setSavedNotice] = useState(false);
@@ -47,45 +47,6 @@ export default function Settings() {
 
   const logoInputRef = useRef(null);
 
-  // --- Gestión de Usuarios ---
-  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
-  const [editingUserId, setEditingUserId] = useState(null);
-  const [userForm, setUserForm] = useState({ name: '', username: '', password: '', role: 'mesero' });
-
-  const openUserModal = (user = null) => {
-    if (user) {
-      setEditingUserId(user.id);
-      setUserForm({ name: user.name, username: user.username, password: user.password, role: user.role });
-    } else {
-      setEditingUserId(null);
-      setUserForm({ name: '', username: '', password: '', role: 'mesero' });
-    }
-    setIsUserModalOpen(true);
-  };
-
-  const handleSaveUser = () => {
-    if (!userForm.name || !userForm.username || !userForm.password) return;
-    if (editingUserId) {
-      updateUser(editingUserId, userForm);
-    } else {
-      if (users.some(u => u.username === userForm.username)) {
-        alert('Este nombre de usuario ya está en uso.');
-        return;
-      }
-      addUser(userForm);
-    }
-    setIsUserModalOpen(false);
-  };
-
-  const handleDeleteUser = (id) => {
-    if (id === activeUser.id) {
-      alert('No puedes eliminar tu propio usuario mientras estás conectado.');
-      return;
-    }
-    if (window.confirm('¿Estás seguro de eliminar este usuario del sistema?')) {
-      deleteUser(id);
-    }
-  };
 
   // --- Guardar Config Negocio ---
   const handleSaveConfig = () => {
@@ -119,7 +80,6 @@ export default function Settings() {
     { id: 'empresa',  icon: Building2,  label: 'Empresa' },
     { id: 'factura',  icon: Receipt,    label: 'Factura y DIAN' },
     { id: 'legal',    icon: Shield,     label: 'Textos Legales' },
-    { id: 'usuarios', icon: UserCog,    label: 'Usuarios' },
   ];
 
   return (
@@ -155,11 +115,7 @@ export default function Settings() {
           </div>
         )}
 
-        {activeTab === 'usuarios' && (
-          <button className="btn btn-primary" onClick={() => openUserModal()}>
-            <Plus size={16} /> Nuevo Usuario
-          </button>
-        )}
+
       </div>
 
       <div className="flex gap-6" style={{ alignItems: 'flex-start' }}>
@@ -474,133 +430,11 @@ export default function Settings() {
             </div>
           )}
 
-          {/* ─── TAB: USUARIOS ─── */}
-          {activeTab === 'usuarios' && (
-            <div className="card">
-              <div className="p-4 border-b border-border flex items-center gap-3">
-                <UserCog size={20} className="text-accent" />
-                <h2 className="font-bold text-lg">Usuarios del Sistema</h2>
-              </div>
-              <div className="table-container">
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Nombre Completo</th>
-                      <th>Usuario</th>
-                      <th>Rol</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {users.map(u => (
-                      <tr key={u.id}>
-                        <td className="font-semibold">{u.name}</td>
-                        <td className="text-muted">@{u.username}</td>
-                        <td>
-                          <span className={`badge ${
-                            u.role === 'admin' ? 'badge-warning' :
-                            u.role === 'cajero' ? 'badge-success' : 'badge-secondary'
-                          } text-xs uppercase font-bold`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="flex gap-2">
-                            <button 
-                              className="btn btn-ghost btn-sm btn-icon" 
-                              onClick={() => openUserModal(u)} 
-                              title="Editar usuario"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button 
-                              className="btn btn-danger btn-sm btn-icon" 
-                              onClick={() => handleDeleteUser(u.id)} 
-                              title="Eliminar usuario"
-                              disabled={u.id === activeUser?.id}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
 
-      {/* ─── MODAL DE USUARIO ─── */}
-      {isUserModalOpen && (
-        <div className="modal-backdrop">
-          <div className="modal-content" style={{ maxWidth: 420 }}>
-            <div className="modal-header">
-              <h2 className="modal-title flex items-center gap-2">
-                <User size={18} /> {editingUserId ? 'Editar Usuario' : 'Nuevo Usuario'}
-              </h2>
-              <button className="btn btn-ghost btn-sm btn-icon" onClick={() => setIsUserModalOpen(false)}>
-                <X size={16} />
-              </button>
-            </div>
-            <div className="modal-body flex flex-col gap-3">
-              <div className="form-group">
-                <label className="form-label">Nombre Completo *</label>
-                <input 
-                  className="form-input" 
-                  value={userForm.name} 
-                  onChange={e => setUserForm({ ...userForm, name: e.target.value })}
-                  placeholder="Ej: Carlos Rodríguez"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Usuario (Login) *</label>
-                <input 
-                  className="form-input" 
-                  value={userForm.username} 
-                  onChange={e => setUserForm({ ...userForm, username: e.target.value })}
-                  placeholder="Ej: carlos.r"
-                  disabled={!!editingUserId}
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Contraseña *</label>
-                <input 
-                  type="password"
-                  className="form-input" 
-                  value={userForm.password} 
-                  onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                  placeholder="Mínimo 4 caracteres"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Rol y Permisos</label>
-                <select 
-                  className="form-select" 
-                  value={userForm.role} 
-                  onChange={e => setUserForm({ ...userForm, role: e.target.value })}
-                >
-                  {Object.entries(ROLES).map(([key]) => (
-                    <option key={key} value={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="modal-footer flex justify-end gap-2">
-              <button className="btn btn-ghost" onClick={() => setIsUserModalOpen(false)}>Cancelar</button>
-              <button 
-                className="btn btn-primary" 
-                onClick={handleSaveUser}
-                disabled={!userForm.name || !userForm.username || !userForm.password}
-              >
-                Guardar Usuario
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
