@@ -39,8 +39,9 @@ export const useAuthStore = create((set, get) => ({
         return { success: false, error: 'PIN incorrecto o usuario inactivo.' };
       }
 
-      set({ activeUser: data, loading: false });
-      return { success: true, user: data };
+      const mappedUser = { ...data, name: data.nombre, role: data.rol.toLowerCase() === 'administrador' ? 'superadmin' : data.rol.toLowerCase() };
+      set({ activeUser: mappedUser, loading: false });
+      return { success: true, user: mappedUser };
     } catch (err) {
       console.error('Login error:', err);
       set({ loading: false });
@@ -69,8 +70,9 @@ export const useAuthStore = create((set, get) => ({
 
       if (error) throw error;
 
-      set({ activeUser: data, isSetupMode: false, loading: false });
-      return { success: true, user: data };
+      const mappedUser = { ...data, name: data.nombre, role: 'superadmin' };
+      set({ activeUser: mappedUser, isSetupMode: false, loading: false });
+      return { success: true, user: mappedUser };
     } catch (err) {
       console.error('Setup error:', err);
       set({ loading: false });
