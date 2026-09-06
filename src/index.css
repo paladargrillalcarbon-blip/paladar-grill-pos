@@ -873,3 +873,34 @@ p  { color: var(--text-secondary); }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── PRINT STYLES ────────────────────────────────────────────────── */
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+  #printable-comanda, #printable-comanda *,
+  #printable-receipt, #printable-receipt * {
+    visibility: visible !important;
+  }
+  #printable-comanda {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 5mm;
+    border: none;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 4mm;
+    border: none;
+    box-shadow: none;
+    font-size: 11px;
+  }
+}

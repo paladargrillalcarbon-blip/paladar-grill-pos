@@ -154,27 +154,6 @@ export default function ComandaModal({ order, totals, onClose }) {
         </div>
 
       </div>
-
-      {/* Print Specific CSS */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          #printable-comanda, #printable-comanda * {
-            visibility: visible;
-          }
-          #printable-comanda {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 80mm;
-            margin: 0;
-            padding: 5mm;
-            border: none;
-          }
-        }
-      `}</style>
     </div>
   );
 }

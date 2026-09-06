@@ -302,24 +302,6 @@ export default function ReceiptModal({ completedData, onClose }) {
           </button>
         </div>
       </div>
-
-      {/* Estilos de impresión */}
-      <style>{`
-        @media print {
-          body * { visibility: hidden; }
-          #printable-receipt, #printable-receipt * { visibility: visible; }
-          #printable-receipt {
-            position: absolute;
-            left: 0; top: 0;
-            width: 80mm;
-            margin: 0;
-            padding: 4mm;
-            border: none;
-            box-shadow: none;
-            font-size: 11px;
-          }
-        }
-      `}</style>
     </div>
   );
 }
