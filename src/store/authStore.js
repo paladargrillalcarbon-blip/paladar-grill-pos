@@ -39,18 +39,18 @@ export const useAuthStore = create((set, get) => ({
         return { success: false, error: 'PIN incorrecto o usuario inactivo.' };
       }
 
-      const safeRol = data.rol ? data.rol.toLowerCase() : 'mesero';
+      const roleStr = (data.role || data.rol || '').toLowerCase();
       const mappedUser = { 
         ...data, 
-        name: data.nombre || 'Usuario', 
-        role: safeRol === 'administrador' ? 'superadmin' : safeRol 
+        name: data.name || data.nombre || 'Usuario', 
+        role: (roleStr === 'administrador' || roleStr === 'admin') ? 'superadmin' : roleStr 
       };
       set({ activeUser: mappedUser, loading: false });
       return { success: true, user: mappedUser };
     } catch (err) {
       console.error('Login error:', err);
       set({ loading: false });
-      return { success: false, error: 'Error al conectar con la base de datos.' };
+      return { success: false, error: err.message || 'Error al conectar con la base de datos.' };
     }
   },
 
@@ -65,8 +65,8 @@ export const useAuthStore = create((set, get) => ({
       const { data, error } = await supabase
         .from('staff')
         .insert([{
-          nombre: name,
-          rol: 'Administrador', // Rol fijo para el primero
+          name: name,
+          role: 'Administrador',
           pin_code: pin_code,
           is_active: true
         }])
@@ -75,18 +75,18 @@ export const useAuthStore = create((set, get) => ({
 
       if (error) throw error;
 
-      const safeRol = data.rol ? data.rol.toLowerCase() : 'administrador';
+      const roleStr = (data.role || data.rol || '').toLowerCase();
       const mappedUser = { 
         ...data, 
-        name: data.nombre || 'Admin', 
-        role: safeRol === 'administrador' ? 'superadmin' : safeRol 
+        name: data.name || data.nombre || 'Admin', 
+        role: (roleStr === 'administrador' || roleStr === 'admin') ? 'superadmin' : roleStr 
       };
       set({ activeUser: mappedUser, isSetupMode: false, loading: false });
       return { success: true, user: mappedUser };
     } catch (err) {
       console.error('Setup error:', err);
       set({ loading: false });
-      return { success: false, error: 'Error al crear el administrador.' };
+      return { success: false, error: err.message || 'Error al crear el administrador.' };
     }
   }
 }));

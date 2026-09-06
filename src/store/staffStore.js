@@ -15,7 +15,13 @@ export const useStaffStore = create((set, get) => ({
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      set({ staff: data || [], loading: false });
+
+      const mapped = (data || []).map(emp => ({
+        ...emp,
+        nombre: emp.name || emp.nombre,
+        rol: emp.role || emp.rol
+      }));
+      set({ staff: mapped, loading: false });
     } catch (err) {
       console.error('Error fetching staff:', err);
       set({ loading: false });
@@ -28,8 +34,8 @@ export const useStaffStore = create((set, get) => ({
       const { data, error } = await supabase
         .from('staff')
         .insert([{
-          nombre: employee.nombre,
-          rol: employee.rol,
+          name: employee.nombre || employee.name,
+          role: employee.rol || employee.role,
           pin_code: employee.pin_code,
           is_active: employee.is_active !== undefined ? employee.is_active : true
         }])
@@ -38,8 +44,14 @@ export const useStaffStore = create((set, get) => ({
 
       if (error) throw error;
 
+      const mapped = {
+        ...data,
+        nombre: data.name || data.nombre,
+        rol: data.role || data.rol
+      };
+
       set((s) => ({
-        staff: [data, ...s.staff],
+        staff: [mapped, ...s.staff],
         loading: false
       }));
       return { success: true };
@@ -56,8 +68,8 @@ export const useStaffStore = create((set, get) => ({
       const { data, error } = await supabase
         .from('staff')
         .update({
-          nombre: employeeData.nombre,
-          rol: employeeData.rol,
+          name: employeeData.nombre || employeeData.name,
+          role: employeeData.rol || employeeData.role,
           pin_code: employeeData.pin_code,
           is_active: employeeData.is_active
         })
@@ -67,8 +79,14 @@ export const useStaffStore = create((set, get) => ({
 
       if (error) throw error;
 
+      const mapped = {
+        ...data,
+        nombre: data.name || data.nombre,
+        rol: data.role || data.rol
+      };
+
       set((s) => ({
-        staff: s.staff.map(e => e.id === id ? data : e),
+        staff: s.staff.map(e => e.id === id ? mapped : e),
         loading: false
       }));
       return { success: true };
