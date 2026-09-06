@@ -39,7 +39,12 @@ export const useAuthStore = create((set, get) => ({
         return { success: false, error: 'PIN incorrecto o usuario inactivo.' };
       }
 
-      const mappedUser = { ...data, name: data.nombre, role: data.rol.toLowerCase() === 'administrador' ? 'superadmin' : data.rol.toLowerCase() };
+      const safeRol = data.rol ? data.rol.toLowerCase() : 'mesero';
+      const mappedUser = { 
+        ...data, 
+        name: data.nombre || 'Usuario', 
+        role: safeRol === 'administrador' ? 'superadmin' : safeRol 
+      };
       set({ activeUser: mappedUser, loading: false });
       return { success: true, user: mappedUser };
     } catch (err) {
@@ -70,7 +75,12 @@ export const useAuthStore = create((set, get) => ({
 
       if (error) throw error;
 
-      const mappedUser = { ...data, name: data.nombre, role: 'superadmin' };
+      const safeRol = data.rol ? data.rol.toLowerCase() : 'administrador';
+      const mappedUser = { 
+        ...data, 
+        name: data.nombre || 'Admin', 
+        role: safeRol === 'administrador' ? 'superadmin' : safeRol 
+      };
       set({ activeUser: mappedUser, isSetupMode: false, loading: false });
       return { success: true, user: mappedUser };
     } catch (err) {

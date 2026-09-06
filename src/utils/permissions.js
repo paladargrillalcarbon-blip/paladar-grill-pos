@@ -90,6 +90,7 @@ export const canAccessRoute = (role, route) => {
   if (!role) return false;
   const allowed = ROLE_ROUTES[role];
   if (allowed === 'all') return true;
+  if (!allowed) return false;
   // exact match or starts with (for nested routes)
   return allowed.some(r => route === r || route.startsWith(r + '/'));
 };
