@@ -62,9 +62,11 @@ export const useAuthStore = create((set, get) => ({
   createFirstAdmin: async (name, pin_code) => {
     set({ loading: true });
     try {
+      const adminId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `adm-${Date.now()}`;
       const { data, error } = await supabase
         .from('staff')
         .insert([{
+          id: adminId,
           name: name,
           role: 'Administrador',
           pin_code: pin_code,

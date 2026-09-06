@@ -31,9 +31,11 @@ export const useStaffStore = create((set, get) => ({
   addStaff: async (employee) => {
     set({ loading: true });
     try {
+      const newId = employee.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `emp-${Date.now()}`);
       const { data, error } = await supabase
         .from('staff')
         .insert([{
+          id: newId,
           name: employee.nombre || employee.name,
           role: employee.rol || employee.role,
           pin_code: employee.pin_code,
