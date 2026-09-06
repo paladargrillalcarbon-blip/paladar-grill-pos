@@ -68,7 +68,7 @@ export const useAuthStore = create((set, get) => ({
         .insert([{
           id: adminId,
           name: name,
-          role: 'Administrador',
+          role: 'admin',
           pin_code: pin_code,
           is_active: true
         }])

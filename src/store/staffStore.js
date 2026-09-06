@@ -32,12 +32,14 @@ export const useStaffStore = create((set, get) => ({
     set({ loading: true });
     try {
       const newId = employee.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `emp-${Date.now()}`);
+      const rawRole = (employee.rol || employee.role || 'mesero').toLowerCase();
+      const safeRole = (rawRole === 'administrador' || rawRole === 'admin') ? 'admin' : rawRole;
       const { data, error } = await supabase
         .from('staff')
         .insert([{
           id: newId,
           name: employee.nombre || employee.name,
-          role: employee.rol || employee.role,
+          role: safeRole,
           pin_code: employee.pin_code,
           is_active: employee.is_active !== undefined ? employee.is_active : true
         }])
@@ -67,11 +69,13 @@ export const useStaffStore = create((set, get) => ({
   updateStaff: async (id, employeeData) => {
     set({ loading: true });
     try {
+      const rawRole = (employeeData.rol || employeeData.role || 'mesero').toLowerCase();
+      const safeRole = (rawRole === 'administrador' || rawRole === 'admin') ? 'admin' : rawRole;
       const { data, error } = await supabase
         .from('staff')
         .update({
           name: employeeData.nombre || employeeData.name,
-          role: employeeData.rol || employeeData.role,
+          role: safeRole,
           pin_code: employeeData.pin_code,
           is_active: employeeData.is_active
         })
