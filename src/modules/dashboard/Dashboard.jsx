@@ -28,11 +28,11 @@ export default function Dashboard() {
   }, [orders]);
 
   const activeOrders = useMemo(() => {
-    return orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+    return (orders || []).filter(o => !['delivered', 'cancelled'].includes(o.status));
   }, [orders]);
 
   const lowStock = useMemo(() => {
-    return ingredients.filter(i => i.stock <= i.minStock);
+    return (ingredients || []).filter(i => i.stock <= i.minStock);
   }, [ingredients]);
 
   // KPIs del día
@@ -62,7 +62,7 @@ export default function Dashboard() {
     return Array.from({ length: 7 }, (_, i) => {
       const date = subDays(new Date(), 6 - i);
       const dateStr = format(date, 'yyyy-MM-dd');
-      const dayOrders = orders.filter(
+      const dayOrders = (orders || []).filter(
         (o) => o.createdAt?.startsWith(dateStr) && o.paymentStatus === 'paid'
       );
       return {
@@ -76,7 +76,7 @@ export default function Dashboard() {
   // Top 5 productos
   const topProducts = useMemo(() => {
     const map = {};
-    orders
+    (orders || [])
       .filter((o) => o.paymentStatus === 'paid')
       .flatMap((o) => o.items || [])
       .forEach((item) => {

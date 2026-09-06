@@ -46,11 +46,11 @@ export default function Sidebar() {
   const { activeUser, logout } = useAuthStore();
 
   const activeOrders = useMemo(() => {
-    return orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+    return (orders || []).filter(o => !['delivered', 'cancelled'].includes(o.status));
   }, [orders]);
 
   const lowStock = useMemo(() => {
-    return ingredients.filter(i => i.stock <= i.minStock);
+    return (ingredients || []).filter(i => i.stock <= i.minStock);
   }, [ingredients]);
 
   return (

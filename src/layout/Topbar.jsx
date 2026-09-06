@@ -12,11 +12,11 @@ export default function Topbar() {
   const ingredients = useInventoryStore((s) => s.ingredients);
 
   const activeOrders = useMemo(() => {
-    return orders.filter(o => !['delivered', 'cancelled'].includes(o.status));
+    return (orders || []).filter(o => !['delivered', 'cancelled'].includes(o.status));
   }, [orders]);
 
   const lowStock = useMemo(() => {
-    return ingredients.filter(i => i.stock <= i.minStock);
+    return (ingredients || []).filter(i => i.stock <= i.minStock);
   }, [ingredients]);
 
   useEffect(() => {
