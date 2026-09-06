@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 import { seedIngredients } from '../data/seed';
 import { getInventoryImpact } from '../utils/promotions';
 
@@ -8,17 +9,114 @@ export const useInventoryStore = create(
     (set, get) => ({
       ingredients: seedIngredients,
       movements: [], // { id, date, type, ingredientId, quantity, reason, orderId }
+      loading: false,
+
+      fetchIngredients: async () => {
+        set({ loading: true });
+        try {
+          const { data, error } = await supabase
+            .from('inventory_items')
+            .select('*')
+            .order('name');
+
+          if (error) console.error('Error fetching inventory_items:', error);
+
+          if (data && data.length > 0) {
+            const mapped = data.map(item => ({
+              id: item.id,
+              name: item.name,
+              unit: item.unit,
+              stock: Number(item.current_stock) || 0,
+              minStock: Number(item.min_stock_alert) || 0,
+              costPerUnit: Number(item.cost_per_unit) || 0,
+              lastRestockDate: item.last_restock_date,
+            }));
+            set({ ingredients: mapped, loading: false });
+          } else {
+            set({ loading: false });
+          }
+        } catch (err) {
+          console.error('fetchIngredients error:', err);
+          set({ loading: false });
+        }
+      },
 
       // --- INGREDIENTES CRUD ---
-      addIngredient: (ing) => set((s) => ({
-        ingredients: [...s.ingredients, { ...ing, id: `ing-${Date.now()}` }]
-      })),
-      updateIngredient: (id, ingData) => set((s) => ({
-        ingredients: s.ingredients.map(i => i.id === id ? { ...i, ...ingData } : i)
-      })),
-      deleteIngredient: (id) => set((s) => ({
-        ingredients: s.ingredients.filter(i => i.id !== id)
-      })),
+      addIngredient: async (ing) => {
+        const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `ing-${Date.now()}`;
+        const newIng = {
+          id: newId,
+          name: ing.name,
+          unit: ing.unit,
+          stock: Number(ing.stock) || 0,
+          minStock: Number(ing.minStock) || 0,
+          costPerUnit: Number(ing.costPerUnit) || 0,
+        };
+
+        set((s) => ({
+          ingredients: [...s.ingredients, newIng]
+        }));
+
+        try {
+          const { data, error } = await supabase
+            .from('inventory_items')
+            .insert([{
+              id: newId,
+              name: newIng.name,
+              unit: newIng.unit,
+              current_stock: newIng.stock,
+              min_stock_alert: newIng.minStock,
+              cost_per_unit: newIng.costPerUnit,
+            }])
+            .select()
+            .single();
+
+          if (error) console.error('Supabase addIngredient error:', error);
+        } catch (err) {
+          console.error('addIngredient catch:', err);
+        }
+      },
+
+      updateIngredient: async (id, ingData) => {
+        set((s) => ({
+          ingredients: s.ingredients.map(i => i.id === id ? { ...i, ...ingData } : i)
+        }));
+
+        try {
+          const payload = {};
+          if (ingData.name !== undefined) payload.name = ingData.name;
+          if (ingData.unit !== undefined) payload.unit = ingData.unit;
+          if (ingData.stock !== undefined) payload.current_stock = Number(ingData.stock);
+          if (ingData.minStock !== undefined) payload.min_stock_alert = Number(ingData.minStock);
+          if (ingData.costPerUnit !== undefined) payload.cost_per_unit = Number(ingData.costPerUnit);
+
+          const { error } = await supabase
+            .from('inventory_items')
+            .update(payload)
+            .eq('id', id);
+
+          if (error) console.error('Supabase updateIngredient error:', error);
+        } catch (err) {
+          console.error('updateIngredient catch:', err);
+        }
+      },
+
+      deleteIngredient: async (id) => {
+        set((s) => ({
+          ingredients: s.ingredients.filter(i => i.id !== id)
+        }));
+
+        try {
+          const { error } = await supabase
+            .from('inventory_items')
+            .delete()
+            .eq('id', id);
+
+          if (error) console.error('Supabase deleteIngredient error:', error);
+        } catch (err) {
+          console.error('deleteIngredient catch:', err);
+        }
+      },
       // -------------------------
 
       // Entrada de mercancía

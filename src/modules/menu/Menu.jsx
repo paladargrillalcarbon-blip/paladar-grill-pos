@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Plus, Edit2, Trash2, Tag, Coffee, Sparkles, 
   Settings2, Search, Check, Save, Layers, HelpCircle, Utensils
@@ -12,8 +12,12 @@ export default function Menu() {
     addCategory, updateCategory, deleteCategory, 
     addProduct, updateProduct, deleteProduct,
     addModifier, updateModifier, deleteModifier,
-    updateConfig
+    updateConfig, fetchMenu, loadingMenu
   } = usePosStore();
+
+  useEffect(() => {
+    if (fetchMenu) fetchMenu();
+  }, [fetchMenu]);
 
   const [activeTab, setActiveTab] = useState('products'); // 'products' | 'categories' | 'modifiers' | 'combos'
   const [searchQuery, setSearchQuery] = useState('');

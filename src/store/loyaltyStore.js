@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { supabase } from '../lib/supabase';
 
 export const useLoyaltyStore = create(
   persist(
@@ -18,32 +19,71 @@ export const useLoyaltyStore = create(
         isActive: true          // El sistema de fidelización está activo
       },
 
-      addCustomer: (customer) => set((s) => {
-        const phoneExists = s.customers.some(c => c.phone === customer.phone);
+      fetchCustomers: async () => {
+        try {
+          const { data, error } = await supabase
+            .from('customers')
+            .select('*')
+            .order('name');
+
+          if (error) console.error('fetchCustomers error:', error);
+          if (data && data.length > 0) {
+            const mapped = data.map(c => ({
+              id: c.id,
+              name: c.name,
+              phone: c.phone,
+              email: c.email,
+              points: Number(c.points_balance) || 0,
+              totalSpent: Number(c.total_spent) || 0,
+              history: []
+            }));
+            set({ customers: mapped });
+          }
+        } catch (err) {
+          console.error('fetchCustomers catch:', err);
+        }
+      },
+
+      addCustomer: async (customer) => {
+        const currentCustomers = get().customers;
+        const phoneExists = currentCustomers.some(c => c.phone === customer.phone);
         if (phoneExists) {
           throw new Error('Ya existe un cliente registrado con este número de teléfono.');
         }
-        return {
-          customers: [
-            ...s.customers,
+
+        const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `cust-${Date.now()}`;
+        const newCustomer = {
+          ...customer,
+          id: newId,
+          points: customer.points || 0,
+          createdAt: new Date().toISOString(),
+          history: customer.points > 0 ? [
             {
-              ...customer,
-              id: `cust-${Date.now()}`,
-              points: customer.points || 0,
-              createdAt: new Date().toISOString(),
-              history: customer.points > 0 ? [
-                {
-                  id: `hist-${Date.now()}`,
-                  type: 'accumulation',
-                  points: customer.points,
-                  date: new Date().toISOString(),
-                  description: 'Puntos iniciales'
-                }
-              ] : []
+              id: `hist-${Date.now()}`,
+              type: 'accumulation',
+              points: customer.points,
+              date: new Date().toISOString(),
+              description: 'Puntos iniciales'
             }
-          ]
+          ] : []
         };
-      }),
+
+        set({ customers: [...currentCustomers, newCustomer] });
+
+        try {
+          await supabase.from('customers').insert([{
+            id: newId,
+            name: customer.name,
+            phone: customer.phone || null,
+            email: customer.email || null,
+            points_balance: customer.points || 0,
+            total_spent: 0
+          }]);
+        } catch (err) {
+          console.error('addCustomer Supabase error:', err);
+        }
+        return newCustomer;
+      },
 
       updateCustomer: (id, customerData) => set((s) => ({
         customers: s.customers.map(c => c.id === id ? { ...c, ...customerData } : c)

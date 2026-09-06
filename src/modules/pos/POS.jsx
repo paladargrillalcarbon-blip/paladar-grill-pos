@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ShoppingCart, Plus, Minus, Trash2, X, ChevronRight, Tag, Save, Coffee, Search, UserPlus, Printer } from 'lucide-react';
 import TableMap                from './TableMap.jsx';
 import { usePosStore }        from '../../store/posStore';
@@ -28,7 +28,7 @@ const ORDER_TYPES = [
 ];
 
 export default function POS() {
-  const { categories, products, modifiers, currentOrder, promotions, applyPromoToOrder, cashSession } = usePosStore();
+  const { categories, products, modifiers, currentOrder, promotions, applyPromoToOrder, cashSession, fetchMenu } = usePosStore();
   const setOrderType  = usePosStore((s) => s.setOrderType);
   const setOrderMeta  = usePosStore((s) => s.setOrderMeta);
   const addItem       = usePosStore((s) => s.addItem);
@@ -42,6 +42,10 @@ export default function POS() {
   
   const consumeForOrder = useInventoryStore((s) => s.consumeForOrder);
   
+  useEffect(() => {
+    if (fetchMenu) fetchMenu();
+  }, [fetchMenu]);
+
   const activePromos = useMemo(() => {
     return promotions.filter(isPromotionActive);
   }, [promotions]);
@@ -52,6 +56,12 @@ export default function POS() {
 
   const [viewMode, setViewMode] = useState('menu'); // 'menu' | 'tables'
   const [activeCategory, setActiveCategory] = useState(categories[0]?.id);
+
+  useEffect(() => {
+    if (!activeCategory && categories.length > 0) {
+      setActiveCategory(categories[0].id);
+    }
+  }, [categories, activeCategory]);
   
   const { tables } = useTableStore();
   const [showPayment,    setShowPayment]    = useState(false);
