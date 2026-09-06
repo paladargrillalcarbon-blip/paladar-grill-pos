@@ -32,7 +32,7 @@ export const useAuthStore = create((set, get) => ({
         .select('*')
         .eq('is_active', true)
         .eq('pin_code', pin_code)
-        .single();
+        .maybeSingle();
 
       if (error || !data) {
         set({ loading: false });
